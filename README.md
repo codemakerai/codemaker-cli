@@ -4,9 +4,7 @@ CodeMaker CLI
 
 ## Overview
 
-CodeMaker is a toolkit that helps developers in day to day work, allowing them to speed their development cycle.
-CodeMaker Toolkit is capable of generating documentation for method definition, generating unit tests and migrating 
-the source code.
+CodeMaker offers tools and automation for software developers for writing, testing, and documenting source code.
 
 ## Features
 
@@ -23,9 +21,15 @@ Following programming languages are supported:
 # Getting started
 
 1. Sign up for the Early Access Program at https://codemaker.ai.
-2. Receive the Early Access invitation email. 
-3. Download the latest CLI release.
-4. Configure the CLI and provide the API Key.
+2. Receive the Early Access Program invitation email. 
+3. Download the [latest CLI release](https://github.com/codemakerai/codemaker-cli/releases) and unzip it.
+4. Add the CLI to your PATH.
+
+```bash
+export PATH=$PATH:/bin
+```
+
+5. Configure the CLI and provide the API Key.
 
 ```bash
 $ codemaker configure
