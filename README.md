@@ -4,7 +4,7 @@ CodeMaker CLI
 
 ## Overview
 
-CodeMaker offers tools and automation for software developers for writing, testing, and documenting source code.
+CodeMaker AI offers tools and automation for software developers for writing, testing, and documenting source code.
 
 ## Features
 
@@ -18,11 +18,29 @@ Following programming languages are supported:
 
 * Java 17
 
-# Getting started
+## Installation
+
+### On MacOS
+
+MacOS users can simply install the latest release of the CLI using [Homebrew Tap](https://github.com/codemakerai/homebrew-tap) by running:
+
+```bash
+$ brew install codemakerai/tap/codemaker-cli
+```
+
+### On Linux
+
+Download the [latest CLI release](https://github.com/codemakerai/codemaker-cli/releases) and unzip it.
+
+### On Windows
+
+Download the [latest CLI release](https://github.com/codemakerai/codemaker-cli/releases) and unzip it.
+
+## Getting started
 
 1. Sign up for the Early Access Program at https://codemaker.ai.
 2. Receive the Early Access Program invitation email. 
-3. Download the [latest CLI release](https://github.com/codemakerai/codemaker-cli/releases) and unzip it.
+3. Install CLI.
 4. Add the CLI to your PATH.
 
 ```bash
