@@ -43,7 +43,7 @@ export PATH=$PATH:/bin
 2. Add the CLI to your PATH.
 
 ```bash
-export PATH=$PATH:/bin
+export PATH=%PATH%;/bin
 ```
 
 ### Using Golang
