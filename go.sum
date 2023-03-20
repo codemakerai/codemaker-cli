@@ -1,10 +1,6 @@
 github.com/benbjohnson/clock v1.1.0 h1:Q92kusRqC1XV2MjkWETPvjJVqKetz1OzxZB7mHJLju8=
-github.com/codemakerai/codemaker-sdk-go v0.0.0-20230307072110-00e6238653b7 h1:2DQZ/ANrlcDEKYfjsYAv/Fkivwk9ZVHTBBRuDsxceKo=
-github.com/codemakerai/codemaker-sdk-go v0.0.0-20230307072110-00e6238653b7/go.mod h1:drvi/xHywQnOgWWGw3dOWZ4CV0NesAdNNuAtsVdZW2E=
-github.com/codemakerai/codemaker-sdk-go v0.0.0-20230307080919-102c2b80ab48 h1:6SZrH0jpxKCqXhfp9iYQ/JAXNJPwH6QNZdnJbJHbM24=
-github.com/codemakerai/codemaker-sdk-go v0.0.0-20230307080919-102c2b80ab48/go.mod h1:drvi/xHywQnOgWWGw3dOWZ4CV0NesAdNNuAtsVdZW2E=
-github.com/codemakerai/codemaker-sdk-go v0.0.1 h1:1M+QBX2LFwACo3jHVr7hBceyww6sSiAQstd9SoEqhSw=
-github.com/codemakerai/codemaker-sdk-go v0.0.1/go.mod h1:drvi/xHywQnOgWWGw3dOWZ4CV0NesAdNNuAtsVdZW2E=
+github.com/codemakerai/codemaker-sdk-go v0.0.2 h1:UcaaQVpgWSV2nGeLJSxRwoAH1R5hG8SvpUAwsPOLteA=
+github.com/codemakerai/codemaker-sdk-go v0.0.2/go.mod h1:drvi/xHywQnOgWWGw3dOWZ4CV0NesAdNNuAtsVdZW2E=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=
 github.com/joho/godotenv v1.5.1/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=
