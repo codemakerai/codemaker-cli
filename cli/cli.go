@@ -47,6 +47,9 @@ func (c *Cli) parseArgs() {
 	case "generate":
 		c.parseGenerateArgs()
 		break
+	case "migrate":
+		c.parseMigrateArgs()
+		break
 	case "configure":
 		c.configure()
 	case "version":
@@ -67,11 +70,11 @@ func (c *Cli) parseGenerateArgs() {
 	switch os.Args[2] {
 	case "docs":
 		generateDocsCmd := flag.NewFlagSet("generateDocs", flag.ExitOnError)
-		lang := generateDocsCmd.String("language", "", "Programming language: Java, Scala, Kotlin")
+		lang := generateDocsCmd.String("language", "", "Programming language: Java")
 
 		err := generateDocsCmd.Parse(os.Args[3:])
 		if err != nil {
-			c.logger.Error("Could not parse args %v", err)
+			c.logger.Errorf("Could not parse args %v", err)
 			os.Exit(1)
 		}
 
@@ -88,9 +91,9 @@ func (c *Cli) parseGenerateArgs() {
 		}
 
 		cl := c.createClient(*config)
-		input := generateDocsCmd.Args()[0]
+		files := generateDocsCmd.Args()[0:]
 
-		if err := c.generateDocumentation(cl, lang, input); err != nil {
+		if err := c.generateDocumentation(cl, lang, files); err != nil {
 			c.logger.Errorf("Could not generate the documentation %v", err)
 		}
 		break
@@ -100,8 +103,50 @@ func (c *Cli) parseGenerateArgs() {
 	}
 }
 
-func (c *Cli) generateDocumentation(cl client.Client, lang *string, input string) error {
-	return c.walkPath(input, func(file string) error {
+func (c *Cli) parseMigrateArgs() {
+	if len(os.Args) < 3 {
+		fmt.Printf("No command specified")
+		c.printMigrateHelp()
+	}
+
+	switch os.Args[2] {
+	case "syntax":
+		migrateSyntaxCmd := flag.NewFlagSet("migrateSyntax", flag.ExitOnError)
+		lang := migrateSyntaxCmd.String("language", "", "Programming language: Java")
+		langVer := migrateSyntaxCmd.String("language-version", "", "Programming language version")
+
+		err := migrateSyntaxCmd.Parse(os.Args[3:])
+		if err != nil {
+			c.logger.Errorf("Could not parse args %v", err)
+		}
+
+		if len(migrateSyntaxCmd.Args()) == 0 {
+			c.logger.Errorf("Expected file input")
+			fmt.Printf("Usage: codemaker migrate syntax <file>\n")
+			os.Exit(1)
+		}
+
+		config, err := createConfig()
+		if err != nil {
+			c.logger.Errorf("No valid api key found %v", err)
+			os.Exit(1)
+		}
+
+		cl := c.createClient(*config)
+		input := migrateSyntaxCmd.Args()[0:]
+
+		if err := c.migrateSyntax(cl, lang, langVer, input); err != nil {
+			c.logger.Errorf("Could not migrate the syntax %v", err)
+		}
+		break
+	default:
+		fmt.Printf("Unknown command %s\n", os.Args[2])
+		c.printMigrateHelp()
+	}
+}
+
+func (c *Cli) generateDocumentation(cl client.Client, lang *string, files []string) error {
+	return c.walkPath(files, func(file string) error {
 		if lang == nil || len(*lang) == 0 {
 			actLang, err := LanguageFromExtension(filepath.Ext(file))
 			if err != nil {
@@ -116,7 +161,7 @@ func (c *Cli) generateDocumentation(cl client.Client, lang *string, input string
 			return err
 		}
 
-		output, err := c.process(cl, client.ModeDocument, *lang, source)
+		output, err := c.process(cl, client.ModeDocument, *lang, "", source)
 		if err != nil {
 			return err
 		}
@@ -129,7 +174,40 @@ func (c *Cli) generateDocumentation(cl client.Client, lang *string, input string
 	})
 }
 
-func (c *Cli) process(cl client.Client, mode string, lang string, source string) (*string, error) {
+func (c *Cli) migrateSyntax(cl client.Client, lang *string, langVer *string, files []string) error {
+	return c.walkPath(files, func(file string) error {
+		if lang == nil || len(*lang) == 0 {
+			actLang, err := LanguageFromExtension(filepath.Ext(file))
+			if err != nil {
+				c.logger.Errorf("skipping unsupported file %s", file)
+				return nil
+			}
+			lang = &actLang
+		}
+
+		c.logger.Infof("Migrating syntax in file %s", file)
+		source, err := c.readFile(file)
+		if err != nil {
+			c.logger.Errorf("failed to read file %s %v", file, err)
+			return nil
+		}
+
+		output, err := c.process(cl, client.ModeMigrateSyntax, *lang, *langVer, source)
+		if err != nil {
+			c.logger.Errorf("failed to migrate syntax in file %s %v", file, err)
+			return nil
+		}
+
+		if err := c.writeFile(file, *output); err != nil {
+			c.logger.Errorf("failed to write file %s %v", file, err)
+			return nil
+		}
+		return nil
+	})
+}
+
+func (c *Cli) process(cl client.Client, mode string, lang string, langVer string, source string) (*string, error) {
+	// TODO pass the lang ver
 	process, err := cl.CreateProcess(&client.CreateProcessRequest{
 		Process: client.Process{
 			Mode:     mode,
@@ -161,7 +239,7 @@ func (c *Cli) process(cl client.Client, mode string, lang string, source string)
 		case <-timeout:
 			return nil, fmt.Errorf("the task processing had timed out")
 		default:
-			c.sleep(retry)
+			c.backoff(retry)
 			retry++
 		}
 	}
@@ -176,35 +254,17 @@ func (c *Cli) process(cl client.Client, mode string, lang string, source string)
 	return &output.Output.Source, nil
 }
 
-func (c *Cli) sleep(retry int) {
-	retry -= nonExponentRetries
-	if retry < 0 {
-		retry = 0
-	}
-
-	if retry > maxExponentRetries {
-		retry = maxExponentRetries
-	}
-
-	retryDelay := initialRetryDelay * (1 << retry)
-	if retryDelay > maxRetryDelay {
-		retryDelay = maxRetryDelay
-	}
-
-	time.Sleep(retryDelay)
-}
-
-func (c *Cli) isCompleted(status *client.GetProcessStatusResponse) bool {
-	return status.Status == client.StatusCompleted
-}
-
 func (c *Cli) configure() error {
 	c.logger.Infof("Configure CLI")
 
 	var apiKey string
 
 	fmt.Print("Enter API Key: ")
-	fmt.Scanln(&apiKey)
+	_, err := fmt.Scanln(&apiKey)
+	if err != nil {
+		c.logger.Errorf("Failed to read the stdin %v", err)
+		return err
+	}
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -230,11 +290,34 @@ func (c *Cli) printVersion() {
 	c.logger.Infof("CodeMaker CLI version %s (Build %s)", Version, Build)
 }
 
+func (c *Cli) isCompleted(status *client.GetProcessStatusResponse) bool {
+	return status.Status == client.StatusCompleted
+}
+
+func (c *Cli) backoff(retry int) {
+	retry -= nonExponentRetries
+	if retry < 0 {
+		retry = 0
+	}
+
+	if retry > maxExponentRetries {
+		retry = maxExponentRetries
+	}
+
+	retryDelay := initialRetryDelay * (1 << retry)
+	if retryDelay > maxRetryDelay {
+		retryDelay = maxRetryDelay
+	}
+
+	time.Sleep(retryDelay)
+}
+
 func (c *Cli) printHelp() {
 	fmt.Printf("Usage: codemaker <command>\n")
 	fmt.Printf("\n")
 	fmt.Printf("Commands:\n")
 	fmt.Printf(" * generate\n")
+	fmt.Printf(" * configure\n")
 	fmt.Printf(" * version\n")
 	os.Exit(1)
 }
@@ -247,12 +330,15 @@ func (c *Cli) printGenerateHelp() {
 	os.Exit(1)
 }
 
-func (c *Cli) walkPath(pattern string, visitor func(file string) error) error {
-	files, err := c.matchFiles(pattern)
-	if err != nil {
-		return err
-	}
+func (c *Cli) printMigrateHelp() {
+	fmt.Printf("Usage: codemaker migrate <command>\n")
+	fmt.Printf("\n")
+	fmt.Printf("Commands:\n")
+	fmt.Printf(" * syntax\n")
+	os.Exit(1)
+}
 
+func (c *Cli) walkPath(files []string, visitor func(file string) error) error {
 	for _, file := range files {
 		if err := visitor(file); err != nil {
 			return err

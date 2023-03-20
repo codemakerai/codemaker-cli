@@ -10,6 +10,7 @@ CodeMaker AI offers tools and automation for software developers for writing, te
 
 Fallowing operations are supported:
 
+* Migrating the programming language syntax.
 * Generating source code documentation.
 
 ## Supported languages
