@@ -3,7 +3,7 @@ module github.com/codemakerai/codemaker-cli
 go 1.20
 
 require (
-	github.com/codemakerai/codemaker-sdk-go v0.0.2
+	github.com/codemakerai/codemaker-sdk-go v0.0.3-0.20230322062931-ad3bd008ba77
 	github.com/joho/godotenv v1.5.1
 	go.uber.org/zap v1.24.0
 )

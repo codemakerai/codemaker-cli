@@ -207,13 +207,15 @@ func (c *Cli) migrateSyntax(cl client.Client, lang *string, langVer *string, fil
 }
 
 func (c *Cli) process(cl client.Client, mode string, lang string, langVer string, source string) (*string, error) {
-	// TODO pass the lang ver
 	process, err := cl.CreateProcess(&client.CreateProcessRequest{
 		Process: client.Process{
 			Mode:     mode,
 			Language: lang,
 			Input: client.Input{
 				Source: source,
+			},
+			OutputOptions: &client.OutputOptions{
+				LanguageVersion: &langVer,
 			},
 		},
 	})
@@ -317,6 +319,7 @@ func (c *Cli) printHelp() {
 	fmt.Printf("\n")
 	fmt.Printf("Commands:\n")
 	fmt.Printf(" * generate\n")
+	fmt.Printf(" * migrate\n")
 	fmt.Printf(" * configure\n")
 	fmt.Printf(" * version\n")
 	os.Exit(1)
