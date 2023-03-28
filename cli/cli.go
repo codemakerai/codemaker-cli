@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -97,6 +98,36 @@ func (c *Cli) parseGenerateArgs() {
 			c.logger.Errorf("Could not generate the documentation %v", err)
 		}
 		break
+	case "unit-tests":
+		generateTestsCmd := flag.NewFlagSet("generateUnitTests", flag.ExitOnError)
+		lang := generateTestsCmd.String("language", "", "Programming language: Java")
+		outputDir := generateTestsCmd.String("output-dir", "", "The output directory")
+
+		err := generateTestsCmd.Parse(os.Args[3:])
+		if err != nil {
+			c.logger.Error("Could not parse args %v", err)
+			os.Exit(1)
+		}
+
+		if len(generateTestsCmd.Args()) == 0 {
+			c.logger.Errorf("Expected file input")
+			fmt.Printf("Usage: codemaker generate tests <file>")
+			os.Exit(1)
+		}
+
+		config, err := createConfig()
+		if err != nil {
+			c.logger.Error("No valid api key found %v", err)
+			os.Exit(1)
+		}
+
+		cl := c.createClient(*config)
+		input := generateTestsCmd.Args()[0:]
+
+		if err := c.generateTests(cl, lang, input, outputDir); err != nil {
+			c.logger.Errorf("Could not generate the test %v", err)
+		}
+		break
 	default:
 		fmt.Printf("Unknown command %s\n", os.Args[2])
 		c.printGenerateHelp()
@@ -122,7 +153,7 @@ func (c *Cli) parseMigrateArgs() {
 
 		if len(migrateSyntaxCmd.Args()) == 0 {
 			c.logger.Errorf("Expected file input")
-			fmt.Printf("Usage: codemaker migrate syntax <file>\n")
+			fmt.Printf("Usage: codemaker migrate syntax <file>")
 			os.Exit(1)
 		}
 
@@ -148,7 +179,7 @@ func (c *Cli) parseMigrateArgs() {
 func (c *Cli) generateDocumentation(cl client.Client, lang *string, files []string) error {
 	return c.walkPath(files, func(file string) error {
 		if lang == nil || len(*lang) == 0 {
-			actLang, err := LanguageFromExtension(filepath.Ext(file))
+			actLang, err := languageFromExtension(filepath.Ext(file))
 			if err != nil {
 				return err
 			}
@@ -174,10 +205,59 @@ func (c *Cli) generateDocumentation(cl client.Client, lang *string, files []stri
 	})
 }
 
+func (c *Cli) generateTests(cl client.Client, lang *string, files []string, outputDir *string) error {
+	return c.walkPath(files, func(file string) error {
+		if lang == nil || len(*lang) == 0 {
+			actLang, err := languageFromExtension(filepath.Ext(file))
+			if err != nil {
+				c.logger.Errorf("skipping unsupported file %s", file)
+				return err
+			}
+			lang = &actLang
+		}
+
+		c.logger.Infof("Generating tests for file %s", file)
+		source, err := c.readFile(file)
+		if err != nil {
+			c.logger.Errorf("failed to read file %s %v", file, err)
+			return err
+		}
+
+		output, err := c.process(cl, client.ModeUnitTest, *lang, "", source)
+		if err != nil {
+			c.logger.Errorf("failed to generate documentation for file %s %v", file, err)
+			return err
+		}
+
+		suffix, err := testFileSuffix(*lang)
+		if err != nil {
+			c.logger.Errorf("could not get suffix for file %s %v", file, err)
+			return err
+		}
+
+		var outputFile string
+		if outputDir != nil && len(*outputDir) > 0 {
+			err := os.MkdirAll(*outputDir, 0755)
+			if err != nil {
+				c.logger.Errorf("could not create directory %s", *outputDir)
+				return err
+			}
+			outputFile = filepath.Join(*outputDir, strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))+suffix)
+		} else {
+			outputFile = strings.TrimSuffix(file, filepath.Ext(file)) + suffix
+		}
+		if err := c.writeFile(outputFile, *output); err != nil {
+			c.logger.Errorf("failed to write file %s %v", file, err)
+			return err
+		}
+		return nil
+	})
+}
+
 func (c *Cli) migrateSyntax(cl client.Client, lang *string, langVer *string, files []string) error {
 	return c.walkPath(files, func(file string) error {
 		if lang == nil || len(*lang) == 0 {
-			actLang, err := LanguageFromExtension(filepath.Ext(file))
+			actLang, err := languageFromExtension(filepath.Ext(file))
 			if err != nil {
 				c.logger.Errorf("skipping unsupported file %s", file)
 				return nil
@@ -330,6 +410,7 @@ func (c *Cli) printGenerateHelp() {
 	fmt.Printf("\n")
 	fmt.Printf("Commands:\n")
 	fmt.Printf(" * docs\n")
+	fmt.Printf(" * unit-tests\n")
 	os.Exit(1)
 }
 

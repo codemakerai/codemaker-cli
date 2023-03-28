@@ -8,9 +8,20 @@ var fileExtensions = map[string]string{
 	".java": "JAVA",
 }
 
-func LanguageFromExtension(extension string) (string, error) {
+var testFileSuffixes = map[string]string{
+	"JAVA": "Test.java",
+}
+
+func languageFromExtension(extension string) (string, error) {
 	if lang, ok := fileExtensions[extension]; ok {
 		return lang, nil
 	}
 	return "", fmt.Errorf("the file extension %s is not supported", extension)
+}
+
+func testFileSuffix(language string) (string, error) {
+	if lang, ok := testFileSuffixes[language]; ok {
+		return lang, nil
+	}
+	return "", fmt.Errorf("the language %s is not supported", language)
 }
