@@ -3,6 +3,6 @@
 package cli
 
 var (
-	Version string = "0.0.4"
+	Version string = "0.0.5"
 	Build   string = "20230404"
 )
