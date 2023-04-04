@@ -51,6 +51,9 @@ func (c *Cli) parseArgs() {
 	case "migrate":
 		c.parseMigrateArgs()
 		break
+	case "refactor":
+		c.parseRefactorArgs()
+		break
 	case "configure":
 		c.configure()
 	case "version":
@@ -176,6 +179,47 @@ func (c *Cli) parseMigrateArgs() {
 	}
 }
 
+func (c *Cli) parseRefactorArgs() {
+	if len(os.Args) < 3 {
+		fmt.Printf("No command specified")
+		c.printRefactorHelp()
+	}
+
+	switch os.Args[2] {
+	case "naming":
+		refactorNaming := flag.NewFlagSet("refactorNaming", flag.ExitOnError)
+		lang := refactorNaming.String("language", "", "Programming language: Java")
+
+		err := refactorNaming.Parse(os.Args[3:])
+		if err != nil {
+			c.logger.Errorf("Could not parse args %v", err)
+		}
+
+		if len(refactorNaming.Args()) == 0 {
+			c.logger.Errorf("Expected file input")
+			fmt.Printf("Usage: codemaker refactor naming <file>")
+			os.Exit(1)
+		}
+
+		config, err := createConfig()
+		if err != nil {
+			c.logger.Errorf("No valid api key found %v", err)
+			os.Exit(1)
+		}
+
+		cl := c.createClient(*config)
+		input := refactorNaming.Args()[0:]
+
+		if err := c.refactorNaming(cl, lang, input); err != nil {
+			c.logger.Errorf("Could not rename variables %v", err)
+		}
+		break
+	default:
+		fmt.Printf("Unknown command %s\n", os.Args[2])
+		c.printRefactorHelp()
+	}
+}
+
 func (c *Cli) generateDocumentation(cl client.Client, lang *string, files []string) error {
 	return c.walkPath(files, func(file string) error {
 		if lang == nil || len(*lang) == 0 {
@@ -275,6 +319,38 @@ func (c *Cli) migrateSyntax(cl client.Client, lang *string, langVer *string, fil
 		output, err := c.process(cl, client.ModeMigrateSyntax, *lang, *langVer, source)
 		if err != nil {
 			c.logger.Errorf("failed to migrate syntax in file %s %v", file, err)
+			return nil
+		}
+
+		if err := c.writeFile(file, *output); err != nil {
+			c.logger.Errorf("failed to write file %s %v", file, err)
+			return nil
+		}
+		return nil
+	})
+}
+
+func (c *Cli) refactorNaming(cl client.Client, lang *string, files []string) error {
+	return c.walkPath(files, func(file string) error {
+		if lang == nil || len(*lang) == 0 {
+			actLang, err := languageFromExtension(filepath.Ext(file))
+			if err != nil {
+				c.logger.Errorf("skipping unsupported file %s", file)
+				return nil
+			}
+			lang = &actLang
+		}
+
+		c.logger.Infof("Renaming local variables in file %s", file)
+		source, err := c.readFile(file)
+		if err != nil {
+			c.logger.Errorf("failed to read file %s %v", file, err)
+			return nil
+		}
+
+		output, err := c.process(cl, client.ModeRefactorNaming, *lang, "", source)
+		if err != nil {
+			c.logger.Errorf("failed to rename variables in file %s %v", file, err)
 			return nil
 		}
 
@@ -400,6 +476,7 @@ func (c *Cli) printHelp() {
 	fmt.Printf("Commands:\n")
 	fmt.Printf(" * generate\n")
 	fmt.Printf(" * migrate\n")
+	fmt.Printf(" * refactor\n")
 	fmt.Printf(" * configure\n")
 	fmt.Printf(" * version\n")
 	os.Exit(1)
@@ -419,6 +496,14 @@ func (c *Cli) printMigrateHelp() {
 	fmt.Printf("\n")
 	fmt.Printf("Commands:\n")
 	fmt.Printf(" * syntax\n")
+	os.Exit(1)
+}
+
+func (c *Cli) printRefactorHelp() {
+	fmt.Printf("Usage: codemaker refactor <command>\n")
+	fmt.Printf("\n")
+	fmt.Printf("Commands:\n")
+	fmt.Printf(" * naming\n")
 	os.Exit(1)
 }
 
