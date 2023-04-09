@@ -13,6 +13,7 @@ Fallowing operations are supported:
 * Generating unit tests.
 * Migrating the programming language syntax.
 * Generating source code documentation.
+* Refactoring and renaming local variables.
 
 ## Supported languages
 
