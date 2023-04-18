@@ -72,6 +72,35 @@ func (c *Cli) parseGenerateArgs() {
 	}
 
 	switch os.Args[2] {
+	case "code":
+		generateDocsCmd := flag.NewFlagSet("generateCode", flag.ExitOnError)
+		lang := generateDocsCmd.String("language", "", "Programming language: Java")
+
+		err := generateDocsCmd.Parse(os.Args[3:])
+		if err != nil {
+			c.logger.Errorf("Could not parse args %v", err)
+			os.Exit(1)
+		}
+
+		if len(generateDocsCmd.Args()) == 0 {
+			c.logger.Errorf("Expected file input")
+			fmt.Printf("Usage: codemaker generate code <file>\n")
+			os.Exit(1)
+		}
+
+		config, err := createConfig()
+		if err != nil {
+			c.logger.Errorf("No valid api key found: %v", err)
+			os.Exit(1)
+		}
+
+		cl := c.createClient(*config)
+		files := generateDocsCmd.Args()[0:]
+
+		if err := c.generateCode(cl, lang, files); err != nil {
+			c.logger.Errorf("Could not generate the code %v", err)
+		}
+		break
 	case "docs":
 		generateDocsCmd := flag.NewFlagSet("generateDocs", flag.ExitOnError)
 		lang := generateDocsCmd.String("language", "", "Programming language: Java")
@@ -218,6 +247,35 @@ func (c *Cli) parseRefactorArgs() {
 		fmt.Printf("Unknown command %s\n", os.Args[2])
 		c.printRefactorHelp()
 	}
+}
+
+func (c *Cli) generateCode(cl client.Client, lang *string, files []string) error {
+	return c.walkPath(files, func(file string) error {
+		if lang == nil || len(*lang) == 0 {
+			actLang, err := languageFromExtension(filepath.Ext(file))
+			if err != nil {
+				return err
+			}
+			lang = &actLang
+		}
+
+		c.logger.Infof("Generating code in file %s", file)
+		source, err := c.readFile(file)
+		if err != nil {
+			return err
+		}
+
+		output, err := c.process(cl, client.ModeCode, *lang, "", source)
+		if err != nil {
+			return err
+		}
+
+		if err := c.writeFile(file, *output); err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 func (c *Cli) generateDocumentation(cl client.Client, lang *string, files []string) error {
@@ -486,6 +544,7 @@ func (c *Cli) printGenerateHelp() {
 	fmt.Printf("Usage: codemaker generate <command>\n")
 	fmt.Printf("\n")
 	fmt.Printf("Commands:\n")
+	fmt.Printf(" * code\n")
 	fmt.Printf(" * docs\n")
 	fmt.Printf(" * unit-tests\n")
 	os.Exit(1)
