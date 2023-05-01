@@ -449,6 +449,8 @@ func (c *Cli) process(cl client.Client, mode string, lang string, langVer string
 
 		if c.isCompleted(status) {
 			break
+		} else if c.isFailed(status) {
+			return nil, fmt.Errorf("the task processing has failed")
 		}
 
 		select {
@@ -508,6 +510,11 @@ func (c *Cli) printVersion() {
 
 func (c *Cli) isCompleted(status *client.GetProcessStatusResponse) bool {
 	return status.Status == client.StatusCompleted
+}
+
+func (c *Cli) isFailed(status *client.GetProcessStatusResponse) bool {
+	return status.Status == client.StatusFailed ||
+		status.Status == client.StatusTimedOut
 }
 
 func (c *Cli) backoff(retry int) {
