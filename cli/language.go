@@ -6,10 +6,12 @@ import "fmt"
 
 var fileExtensions = map[string]string{
 	".java": "JAVA",
+	".js":   "JAVASCRIPT",
 }
 
 var testFileSuffixes = map[string]string{
-	"JAVA": "Test.java",
+	"JAVA":       "Test.java",
+	"JAVASCRIPT": "_test.js",
 }
 
 func languageFromExtension(extension string) (string, error) {

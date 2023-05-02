@@ -10,6 +10,7 @@ CodeMaker AI offers tools and automation for software developers for writing, te
 
 Fallowing operations are supported:
 
+* Context-aware source code generation.
 * Generating unit tests.
 * Migrating the programming language syntax.
 * Generating source code documentation.
@@ -19,7 +20,10 @@ Fallowing operations are supported:
 
 Following programming languages are supported:
 
-* Java 17
+* JavaScript
+* Java
+  
+More language support is coming soon.
 
 ## Installation
 
