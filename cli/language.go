@@ -2,16 +2,21 @@
 
 package cli
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/codemakerai/codemaker-sdk-go/client"
+)
 
 var fileExtensions = map[string]string{
-	".java": "JAVA",
-	".js":   "JAVASCRIPT",
+	".js":   client.LanguageJavaScript,
+	".java": client.LanguageJava,
+	".kt":   client.LanguageKotlin,
 }
 
 var testFileSuffixes = map[string]string{
-	"JAVA":       "Test.java",
-	"JAVASCRIPT": "_test.js",
+	client.LanguageJavaScript: "_test.js",
+	client.LanguageJava:       "Test.java",
+	client.LanguageKotlin:     "Test.kt",
 }
 
 func languageFromExtension(extension string) (string, error) {

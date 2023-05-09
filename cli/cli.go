@@ -74,7 +74,7 @@ func (c *Cli) parseGenerateArgs() {
 	switch os.Args[2] {
 	case "code":
 		generateDocsCmd := flag.NewFlagSet("generateCode", flag.ExitOnError)
-		lang := generateDocsCmd.String("language", "", "Programming language: Java")
+		lang := generateDocsCmd.String("language", "", "Programming language: JavaScript, Java, Kotlin")
 
 		err := generateDocsCmd.Parse(os.Args[3:])
 		if err != nil {
@@ -103,7 +103,7 @@ func (c *Cli) parseGenerateArgs() {
 		break
 	case "docs":
 		generateDocsCmd := flag.NewFlagSet("generateDocs", flag.ExitOnError)
-		lang := generateDocsCmd.String("language", "", "Programming language: Java")
+		lang := generateDocsCmd.String("language", "", "Programming language: JavaScript, Java, Kotlin")
 
 		err := generateDocsCmd.Parse(os.Args[3:])
 		if err != nil {
@@ -132,7 +132,7 @@ func (c *Cli) parseGenerateArgs() {
 		break
 	case "unit-tests":
 		generateTestsCmd := flag.NewFlagSet("generateUnitTests", flag.ExitOnError)
-		lang := generateTestsCmd.String("language", "", "Programming language: Java")
+		lang := generateTestsCmd.String("language", "", "Programming language: JavaScript, Java, Kotlin")
 		outputDir := generateTestsCmd.String("output-dir", "", "The output directory")
 
 		err := generateTestsCmd.Parse(os.Args[3:])
@@ -217,7 +217,7 @@ func (c *Cli) parseRefactorArgs() {
 	switch os.Args[2] {
 	case "naming":
 		refactorNaming := flag.NewFlagSet("refactorNaming", flag.ExitOnError)
-		lang := refactorNaming.String("language", "", "Programming language: Java")
+		lang := refactorNaming.String("language", "", "Programming language: JavaScript, Java, Kotlin")
 
 		err := refactorNaming.Parse(os.Args[3:])
 		if err != nil {
