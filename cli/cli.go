@@ -75,6 +75,7 @@ func (c *Cli) parseGenerateArgs() {
 	case "code":
 		generateDocsCmd := flag.NewFlagSet("generateCode", flag.ExitOnError)
 		lang := generateDocsCmd.String("language", "", "Programming language: JavaScript, Java, Kotlin")
+		replace := generateDocsCmd.Bool("replace", false, "Determines if the existing code is replaced")
 
 		err := generateDocsCmd.Parse(os.Args[3:])
 		if err != nil {
@@ -97,13 +98,14 @@ func (c *Cli) parseGenerateArgs() {
 		cl := c.createClient(*config)
 		files := generateDocsCmd.Args()[0:]
 
-		if err := c.generateCode(cl, lang, files); err != nil {
+		if err := c.generateCode(cl, lang, replace, files); err != nil {
 			c.logger.Errorf("Could not generate the code %v", err)
 		}
 		break
 	case "docs":
 		generateDocsCmd := flag.NewFlagSet("generateDocs", flag.ExitOnError)
 		lang := generateDocsCmd.String("language", "", "Programming language: JavaScript, Java, Kotlin")
+		replace := generateDocsCmd.Bool("replace", false, "Determines if the existing documentations are replaced")
 
 		err := generateDocsCmd.Parse(os.Args[3:])
 		if err != nil {
@@ -126,7 +128,7 @@ func (c *Cli) parseGenerateArgs() {
 		cl := c.createClient(*config)
 		files := generateDocsCmd.Args()[0:]
 
-		if err := c.generateDocumentation(cl, lang, files); err != nil {
+		if err := c.generateDocumentation(cl, lang, replace, files); err != nil {
 			c.logger.Errorf("Could not generate the documentation %v", err)
 		}
 		break
@@ -249,7 +251,7 @@ func (c *Cli) parseRefactorArgs() {
 	}
 }
 
-func (c *Cli) generateCode(cl client.Client, lang *string, files []string) error {
+func (c *Cli) generateCode(cl client.Client, lang *string, replace *bool, files []string) error {
 	return c.walkPath(files, func(file string) error {
 		if lang == nil || len(*lang) == 0 {
 			actLang, err := languageFromExtension(filepath.Ext(file))
@@ -265,7 +267,7 @@ func (c *Cli) generateCode(cl client.Client, lang *string, files []string) error
 			return err
 		}
 
-		output, err := c.process(cl, client.ModeCode, *lang, "", source)
+		output, err := c.process(cl, client.ModeCode, *lang, *replace, "", source)
 		if err != nil {
 			return err
 		}
@@ -278,7 +280,7 @@ func (c *Cli) generateCode(cl client.Client, lang *string, files []string) error
 	})
 }
 
-func (c *Cli) generateDocumentation(cl client.Client, lang *string, files []string) error {
+func (c *Cli) generateDocumentation(cl client.Client, lang *string, replace *bool, files []string) error {
 	return c.walkPath(files, func(file string) error {
 		if lang == nil || len(*lang) == 0 {
 			actLang, err := languageFromExtension(filepath.Ext(file))
@@ -294,7 +296,7 @@ func (c *Cli) generateDocumentation(cl client.Client, lang *string, files []stri
 			return err
 		}
 
-		output, err := c.process(cl, client.ModeDocument, *lang, "", source)
+		output, err := c.process(cl, client.ModeDocument, *lang, *replace, "", source)
 		if err != nil {
 			return err
 		}
@@ -325,7 +327,7 @@ func (c *Cli) generateTests(cl client.Client, lang *string, files []string, outp
 			return err
 		}
 
-		output, err := c.process(cl, client.ModeUnitTest, *lang, "", source)
+		output, err := c.process(cl, client.ModeUnitTest, *lang, false, "", source)
 		if err != nil {
 			c.logger.Errorf("failed to generate documentation for file %s %v", file, err)
 			return err
@@ -374,7 +376,7 @@ func (c *Cli) migrateSyntax(cl client.Client, lang *string, langVer *string, fil
 			return nil
 		}
 
-		output, err := c.process(cl, client.ModeMigrateSyntax, *lang, *langVer, source)
+		output, err := c.process(cl, client.ModeMigrateSyntax, *lang, false, *langVer, source)
 		if err != nil {
 			c.logger.Errorf("failed to migrate syntax in file %s %v", file, err)
 			return nil
@@ -406,7 +408,7 @@ func (c *Cli) refactorNaming(cl client.Client, lang *string, files []string) err
 			return nil
 		}
 
-		output, err := c.process(cl, client.ModeRefactorNaming, *lang, "", source)
+		output, err := c.process(cl, client.ModeRefactorNaming, *lang, false, "", source)
 		if err != nil {
 			c.logger.Errorf("failed to rename variables in file %s %v", file, err)
 			return nil
@@ -420,7 +422,12 @@ func (c *Cli) refactorNaming(cl client.Client, lang *string, files []string) err
 	})
 }
 
-func (c *Cli) process(cl client.Client, mode string, lang string, langVer string, source string) (*string, error) {
+func (c *Cli) process(cl client.Client, mode string, lang string, replace bool, langVer string, source string) (*string, error) {
+	modify := client.ModifyNone
+	if replace {
+		modify = client.ModifyReplace
+	}
+
 	process, err := cl.CreateProcess(&client.CreateProcessRequest{
 		Process: client.Process{
 			Mode:     mode,
@@ -430,6 +437,7 @@ func (c *Cli) process(cl client.Client, mode string, lang string, langVer string
 			},
 			Options: &client.Options{
 				LanguageVersion: &langVer,
+				Modify:          &modify,
 			},
 		},
 	})
