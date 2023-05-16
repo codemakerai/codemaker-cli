@@ -428,7 +428,7 @@ func (c *Cli) process(cl client.Client, mode string, lang string, langVer string
 			Input: client.Input{
 				Source: source,
 			},
-			OutputOptions: &client.OutputOptions{
+			Options: &client.Options{
 				LanguageVersion: &langVer,
 			},
 		},
