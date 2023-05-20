@@ -9,6 +9,7 @@ import (
 
 var fileExtensions = map[string]string{
 	".js":   client.LanguageJavaScript,
+	".jsx":  client.LanguageJavaScript,
 	".java": client.LanguageJava,
 	".kt":   client.LanguageKotlin,
 }
