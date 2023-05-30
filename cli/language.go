@@ -11,12 +11,14 @@ var fileExtensions = map[string]string{
 	".js":   client.LanguageJavaScript,
 	".jsx":  client.LanguageJavaScript,
 	".java": client.LanguageJava,
+	".go":   client.LanguageGo,
 	".kt":   client.LanguageKotlin,
 }
 
 var testFileSuffixes = map[string]string{
 	client.LanguageJavaScript: "_test.js",
 	client.LanguageJava:       "Test.java",
+	client.LanguageGo:         "_test.go",
 	client.LanguageKotlin:     "Test.kt",
 }
 
