@@ -21,6 +21,9 @@ Fallowing operations are supported:
 Following programming languages are supported:
 
 * JavaScript
+* JSX
+* TypeScript
+* TSX
 * Java
 * Go
 * Kotlin
