@@ -13,8 +13,9 @@ var fileExtensions = map[string]string{
 	".ts":   client.LanguageTypeScript,
 	".tsx":  client.LanguageTypeScript,
 	".java": client.LanguageJava,
-	".go":   client.LanguageGo,
 	".kt":   client.LanguageKotlin,
+	".cs":   client.LanguageCSharp,
+	".go":   client.LanguageGo,
 }
 
 var testFileSuffixes = map[string]string{
