@@ -16,10 +16,10 @@ import (
 )
 
 const (
-	initialRetryDelay  = 2 * time.Second
+	initialRetryDelay  = 1 * time.Second
 	maxRetryDelay      = 60 * time.Second
 	processTimeout     = 10 * time.Minute
-	nonExponentRetries = 4
+	nonExponentRetries = 8
 	maxExponentRetries = 16
 )
 
