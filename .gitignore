@@ -105,3 +105,5 @@ go.work
 # Build
 codemaker
 codemaker-cli
+
+dist/
