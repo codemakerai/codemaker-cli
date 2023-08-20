@@ -1,6 +1,6 @@
 module github.com/codemakerai/codemaker-cli
 
-go 1.20
+go 1.21
 
 require (
 	github.com/codemakerai/codemaker-sdk-go v0.0.12
