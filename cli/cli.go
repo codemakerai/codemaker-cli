@@ -54,6 +54,9 @@ func (c *Cli) parseArgs() {
 	case "refactor":
 		c.parseRefactorArgs()
 		break
+	case "fix":
+		c.parseFixArgs()
+		break
 	case "configure":
 		c.configure()
 	case "version":
@@ -253,6 +256,47 @@ func (c *Cli) parseRefactorArgs() {
 	}
 }
 
+func (c *Cli) parseFixArgs() {
+	if len(os.Args) < 3 {
+		fmt.Printf("No command specified")
+		c.printRefactorHelp()
+	}
+
+	switch os.Args[2] {
+	case "syntax":
+		refactorNaming := flag.NewFlagSet("fixSyntax", flag.ExitOnError)
+		lang := refactorNaming.String("language", "", "Programming language: JavaScript, Java, Kotlin")
+
+		err := refactorNaming.Parse(os.Args[3:])
+		if err != nil {
+			c.logger.Errorf("Could not parse args %v", err)
+		}
+
+		if len(refactorNaming.Args()) == 0 {
+			c.logger.Errorf("Expected file input")
+			fmt.Printf("Usage: codemaker fix syntax <file>")
+			os.Exit(1)
+		}
+
+		config, err := createConfig()
+		if err != nil {
+			c.logger.Errorf("No valid api key found %v", err)
+			os.Exit(1)
+		}
+
+		cl := c.createClient(*config)
+		input := refactorNaming.Args()[0:]
+
+		if err := c.fixSyntax(cl, lang, input); err != nil {
+			c.logger.Errorf("Could not fix syntax %v", err)
+		}
+		break
+	default:
+		fmt.Printf("Unknown command %s\n", os.Args[2])
+		c.printFixHelp()
+	}
+}
+
 func (c *Cli) generateCode(cl client.Client, lang *string, replace *bool, codePath *string, files []string) error {
 	return c.walkPath(files, func(file string) error {
 		if lang == nil || len(*lang) == 0 {
@@ -424,6 +468,38 @@ func (c *Cli) refactorNaming(cl client.Client, lang *string, files []string) err
 	})
 }
 
+func (c *Cli) fixSyntax(cl client.Client, lang *string, files []string) error {
+	return c.walkPath(files, func(file string) error {
+		if lang == nil || len(*lang) == 0 {
+			actLang, err := languageFromExtension(filepath.Ext(file))
+			if err != nil {
+				c.logger.Errorf("skipping unsupported file %s", file)
+				return nil
+			}
+			lang = &actLang
+		}
+
+		c.logger.Infof("Fixing syntax in file %s", file)
+		source, err := c.readFile(file)
+		if err != nil {
+			c.logger.Errorf("failed to read file %s %v", file, err)
+			return nil
+		}
+
+		output, err := c.process(cl, client.ModeFixSyntax, *lang, false, nil, "", source)
+		if err != nil {
+			c.logger.Errorf("failed to fix syntax in file %s %v", file, err)
+			return nil
+		}
+
+		if err := c.writeFile(file, *output); err != nil {
+			c.logger.Errorf("failed to write file %s %v", file, err)
+			return nil
+		}
+		return nil
+	})
+}
+
 func (c *Cli) process(cl client.Client, mode string, lang string, replace bool, codePath *string, langVer string, source string) (*string, error) {
 	modify := client.ModifyNone
 	if replace {
@@ -557,6 +633,7 @@ func (c *Cli) printHelp() {
 	fmt.Printf(" * generate\n")
 	fmt.Printf(" * migrate\n")
 	fmt.Printf(" * refactor\n")
+	fmt.Printf(" * fix\n")
 	fmt.Printf(" * configure\n")
 	fmt.Printf(" * version\n")
 	os.Exit(1)
@@ -585,6 +662,14 @@ func (c *Cli) printRefactorHelp() {
 	fmt.Printf("\n")
 	fmt.Printf("Commands:\n")
 	fmt.Printf(" * naming\n")
+	os.Exit(1)
+}
+
+func (c *Cli) printFixHelp() {
+	fmt.Printf("Usage: codemaker fix <command>\n")
+	fmt.Printf("\n")
+	fmt.Printf("Commands:\n")
+	fmt.Printf(" * syntax\n")
 	os.Exit(1)
 }
 

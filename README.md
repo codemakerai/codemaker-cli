@@ -15,6 +15,7 @@ Fallowing operations are supported:
 * Migrating the programming language syntax.
 * Generating source code documentation.
 * Refactoring and renaming local variables.
+* Fixing syntax.
 
 ## Supported languages
 
