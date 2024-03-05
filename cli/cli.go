@@ -48,12 +48,6 @@ func (c *Cli) parseArgs() {
 	case "generate":
 		c.parseGenerateArgs()
 		break
-	case "migrate":
-		c.parseMigrateArgs()
-		break
-	case "refactor":
-		c.parseRefactorArgs()
-		break
 	case "fix":
 		c.parseFixArgs()
 		break
@@ -137,122 +131,9 @@ func (c *Cli) parseGenerateArgs() {
 			c.logger.Errorf("Could not generate the documentation %v", err)
 		}
 		break
-	case "unit-tests":
-		generateTestsCmd := flag.NewFlagSet("generateUnitTests", flag.ExitOnError)
-		lang := generateTestsCmd.String("language", "", "Programming language: JavaScript, Java, Kotlin")
-		outputDir := generateTestsCmd.String("output-dir", "", "The output directory")
-
-		err := generateTestsCmd.Parse(os.Args[3:])
-		if err != nil {
-			c.logger.Error("Could not parse args %v", err)
-			os.Exit(1)
-		}
-
-		if len(generateTestsCmd.Args()) == 0 {
-			c.logger.Errorf("Expected file input")
-			fmt.Printf("Usage: codemaker generate tests <file>")
-			os.Exit(1)
-		}
-
-		config, err := createConfig()
-		if err != nil {
-			c.logger.Error("No valid api key found %v", err)
-			os.Exit(1)
-		}
-
-		cl := c.createClient(*config)
-		input := generateTestsCmd.Args()[0:]
-
-		if err := c.generateTests(cl, lang, input, outputDir); err != nil {
-			c.logger.Errorf("Could not generate the test %v", err)
-		}
-		break
 	default:
 		fmt.Printf("Unknown command %s\n", os.Args[2])
 		c.printGenerateHelp()
-	}
-}
-
-func (c *Cli) parseMigrateArgs() {
-	if len(os.Args) < 3 {
-		fmt.Printf("No command specified")
-		c.printMigrateHelp()
-	}
-
-	switch os.Args[2] {
-	case "syntax":
-		migrateSyntaxCmd := flag.NewFlagSet("migrateSyntax", flag.ExitOnError)
-		lang := migrateSyntaxCmd.String("language", "", "Programming language: Java")
-		langVer := migrateSyntaxCmd.String("language-version", "", "Programming language version")
-
-		err := migrateSyntaxCmd.Parse(os.Args[3:])
-		if err != nil {
-			c.logger.Errorf("Could not parse args %v", err)
-		}
-
-		if len(migrateSyntaxCmd.Args()) == 0 {
-			c.logger.Errorf("Expected file input")
-			fmt.Printf("Usage: codemaker migrate syntax <file>")
-			os.Exit(1)
-		}
-
-		config, err := createConfig()
-		if err != nil {
-			c.logger.Errorf("No valid api key found %v", err)
-			os.Exit(1)
-		}
-
-		cl := c.createClient(*config)
-		input := migrateSyntaxCmd.Args()[0:]
-
-		if err := c.migrateSyntax(cl, lang, langVer, input); err != nil {
-			c.logger.Errorf("Could not migrate the syntax %v", err)
-		}
-		break
-	default:
-		fmt.Printf("Unknown command %s\n", os.Args[2])
-		c.printMigrateHelp()
-	}
-}
-
-func (c *Cli) parseRefactorArgs() {
-	if len(os.Args) < 3 {
-		fmt.Printf("No command specified")
-		c.printRefactorHelp()
-	}
-
-	switch os.Args[2] {
-	case "naming":
-		refactorNaming := flag.NewFlagSet("refactorNaming", flag.ExitOnError)
-		lang := refactorNaming.String("language", "", "Programming language: JavaScript, Java, Kotlin")
-
-		err := refactorNaming.Parse(os.Args[3:])
-		if err != nil {
-			c.logger.Errorf("Could not parse args %v", err)
-		}
-
-		if len(refactorNaming.Args()) == 0 {
-			c.logger.Errorf("Expected file input")
-			fmt.Printf("Usage: codemaker refactor naming <file>")
-			os.Exit(1)
-		}
-
-		config, err := createConfig()
-		if err != nil {
-			c.logger.Errorf("No valid api key found %v", err)
-			os.Exit(1)
-		}
-
-		cl := c.createClient(*config)
-		input := refactorNaming.Args()[0:]
-
-		if err := c.refactorNaming(cl, lang, input); err != nil {
-			c.logger.Errorf("Could not rename variables %v", err)
-		}
-		break
-	default:
-		fmt.Printf("Unknown command %s\n", os.Args[2])
-		c.printRefactorHelp()
 	}
 }
 
