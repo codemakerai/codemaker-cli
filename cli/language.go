@@ -8,14 +8,20 @@ import (
 )
 
 var fileExtensions = map[string]string{
+	".c":    client.LanguageC,
+	".cpp":  client.LanguageCPP,
+	".cxx":  client.LanguageCPP,
+	".cc":   client.LanguageCPP,
 	".js":   client.LanguageJavaScript,
 	".jsx":  client.LanguageJavaScript,
-	".ts":   client.LanguageTypeScript,
-	".tsx":  client.LanguageTypeScript,
 	".java": client.LanguageJava,
-	".kt":   client.LanguageKotlin,
+	".php":  client.LanguagePHP,
 	".cs":   client.LanguageCSharp,
 	".go":   client.LanguageGo,
+	".kt":   client.LanguageKotlin,
+	".ts":   client.LanguageTypeScript,
+	".tsx":  client.LanguageTypeScript,
+	".rs":   client.LanguageTypeRust,
 }
 
 var testFileSuffixes = map[string]string{
