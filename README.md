@@ -11,21 +11,23 @@ CodeMaker AI offers tools and automation for software developers for writing, te
 Fallowing operations are supported:
 
 * Context-aware source code generation.
-* Generating unit tests.
-* Migrating the programming language syntax.
 * Generating source code documentation.
-* Refactoring and renaming local variables.
 * Fixing syntax.
 
 ## Supported languages
 
 Following programming languages are supported:
 
-* JavaScript & JSX
-* TypeScript & TSX
+* C
+* C++
+* PHP
 * Java
+* JavaScript & JSX
+* CSharp
 * Go
 * Kotlin
+* TypeScript & TSX
+* Rust
   
 More language support is coming soon.
 
