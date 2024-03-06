@@ -21,7 +21,7 @@ var fileExtensions = map[string]string{
 	".kt":   client.LanguageKotlin,
 	".ts":   client.LanguageTypeScript,
 	".tsx":  client.LanguageTypeScript,
-	".rs":   client.LanguageTypeRust,
+	".rs":   client.LanguageRust,
 }
 
 var testFileSuffixes = map[string]string{
