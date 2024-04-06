@@ -3,6 +3,7 @@
 package cli
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"github.com/codemakerai/codemaker-sdk-go/client"
@@ -74,6 +75,7 @@ func (c *Cli) parseGenerateArgs() {
 		lang := generateDocsCmd.String("language", "", "Programming language: JavaScript, Java, Kotlin")
 		replace := generateDocsCmd.Bool("replace", false, "Determines if the existing code is replaced")
 		codePath := generateDocsCmd.String("codepath", "", "The codepath to match.")
+		model := generateDocsCmd.String("model", "", "The fine-tuned model name.")
 
 		err := generateDocsCmd.Parse(os.Args[3:])
 		if err != nil {
@@ -93,10 +95,15 @@ func (c *Cli) parseGenerateArgs() {
 			os.Exit(1)
 		}
 
-		cl := c.createClient(*config)
+		cl, err := c.createClient(*config)
+		if err != nil {
+			c.logger.Errorf("Can not create client: %v", err)
+			os.Exit(1)
+		}
+
 		files := generateDocsCmd.Args()[0:]
 
-		if err := c.generateCode(cl, lang, replace, codePath, files); err != nil {
+		if err := c.generateCode(cl, lang, replace, codePath, model, files); err != nil {
 			c.logger.Errorf("Could not generate the code %v", err)
 		}
 		break
@@ -124,7 +131,12 @@ func (c *Cli) parseGenerateArgs() {
 			os.Exit(1)
 		}
 
-		cl := c.createClient(*config)
+		cl, err := c.createClient(*config)
+		if err != nil {
+			c.logger.Errorf("Can not create client: %v", err)
+			os.Exit(1)
+		}
+
 		files := generateDocsCmd.Args()[0:]
 
 		if err := c.generateDocumentation(cl, lang, replace, codePath, files); err != nil {
@@ -165,7 +177,12 @@ func (c *Cli) parseFixArgs() {
 			os.Exit(1)
 		}
 
-		cl := c.createClient(*config)
+		cl, err := c.createClient(*config)
+		if err != nil {
+			c.logger.Errorf("Can not create client: %v", err)
+			os.Exit(1)
+		}
+
 		input := refactorNaming.Args()[0:]
 
 		if err := c.fixSyntax(cl, lang, input); err != nil {
@@ -178,7 +195,7 @@ func (c *Cli) parseFixArgs() {
 	}
 }
 
-func (c *Cli) generateCode(cl client.Client, lang *string, replace *bool, codePath *string, files []string) error {
+func (c *Cli) generateCode(cl client.Client, lang *string, replace *bool, codePath *string, model *string, files []string) error {
 	return c.walkPath(files, func(file string) error {
 		if lang == nil || len(*lang) == 0 {
 			actLang, err := languageFromExtension(filepath.Ext(file))
@@ -194,7 +211,7 @@ func (c *Cli) generateCode(cl client.Client, lang *string, replace *bool, codePa
 			return err
 		}
 
-		output, err := c.process(cl, client.ModeCode, *lang, *replace, codePath, "", source)
+		output, err := c.process(cl, client.ModeCode, *lang, *replace, codePath, model, source)
 		if err != nil {
 			return err
 		}
@@ -223,7 +240,7 @@ func (c *Cli) generateDocumentation(cl client.Client, lang *string, replace *boo
 			return err
 		}
 
-		output, err := c.process(cl, client.ModeDocument, *lang, *replace, codePath, "", source)
+		output, err := c.process(cl, client.ModeDocument, *lang, *replace, codePath, nil, source)
 		if err != nil {
 			return err
 		}
@@ -254,7 +271,7 @@ func (c *Cli) generateTests(cl client.Client, lang *string, files []string, outp
 			return err
 		}
 
-		output, err := c.process(cl, client.ModeUnitTest, *lang, false, nil, "", source)
+		output, err := c.process(cl, client.ModeUnitTest, *lang, false, nil, nil, source)
 		if err != nil {
 			c.logger.Errorf("failed to generate documentation for file %s %v", file, err)
 			return err
@@ -285,7 +302,7 @@ func (c *Cli) generateTests(cl client.Client, lang *string, files []string, outp
 	})
 }
 
-func (c *Cli) migrateSyntax(cl client.Client, lang *string, langVer *string, files []string) error {
+func (c *Cli) migrateSyntax(cl client.Client, lang *string, files []string) error {
 	return c.walkPath(files, func(file string) error {
 		if lang == nil || len(*lang) == 0 {
 			actLang, err := languageFromExtension(filepath.Ext(file))
@@ -303,7 +320,7 @@ func (c *Cli) migrateSyntax(cl client.Client, lang *string, langVer *string, fil
 			return nil
 		}
 
-		output, err := c.process(cl, client.ModeMigrateSyntax, *lang, false, nil, *langVer, source)
+		output, err := c.process(cl, client.ModeMigrateSyntax, *lang, false, nil, nil, source)
 		if err != nil {
 			c.logger.Errorf("failed to migrate syntax in file %s %v", file, err)
 			return nil
@@ -335,7 +352,7 @@ func (c *Cli) refactorNaming(cl client.Client, lang *string, files []string) err
 			return nil
 		}
 
-		output, err := c.process(cl, client.ModeRefactorNaming, *lang, false, nil, "", source)
+		output, err := c.process(cl, client.ModeRefactorNaming, *lang, false, nil, nil, source)
 		if err != nil {
 			c.logger.Errorf("failed to rename variables in file %s %v", file, err)
 			return nil
@@ -367,7 +384,7 @@ func (c *Cli) fixSyntax(cl client.Client, lang *string, files []string) error {
 			return nil
 		}
 
-		output, err := c.process(cl, client.ModeFixSyntax, *lang, false, nil, "", source)
+		output, err := c.process(cl, client.ModeFixSyntax, *lang, false, nil, nil, source)
 		if err != nil {
 			c.logger.Errorf("failed to fix syntax in file %s %v", file, err)
 			return nil
@@ -381,7 +398,9 @@ func (c *Cli) fixSyntax(cl client.Client, lang *string, files []string) error {
 	})
 }
 
-func (c *Cli) process(cl client.Client, mode string, lang string, replace bool, codePath *string, langVer string, source string) (*string, error) {
+func (c *Cli) process(cl client.Client, mode string, lang string, replace bool, codePath *string, model *string, source string) (*string, error) {
+	ctx := context.Background()
+
 	modify := client.ModifyNone
 	if replace {
 		modify = client.ModifyReplace
@@ -391,57 +410,23 @@ func (c *Cli) process(cl client.Client, mode string, lang string, replace bool, 
 		codePath = nil
 	}
 
-	process, err := cl.CreateProcess(&client.CreateProcessRequest{
-		Process: client.Process{
-			Mode:     mode,
-			Language: lang,
-			Input: client.Input{
-				Source: source,
-			},
-			Options: &client.Options{
-				LanguageVersion: &langVer,
-				Modify:          &modify,
-				CodePath:        codePath,
-			},
+	process, err := cl.Process(ctx, &client.ProcessRequest{
+		Mode:     mode,
+		Language: lang,
+		Input: client.Input{
+			Source: source,
+		},
+		Options: &client.Options{
+			Modify:   &modify,
+			CodePath: codePath,
+			Model:    model,
 		},
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	retry := 0
-	timeout := time.After(processTimeout)
-	for {
-		status, err := cl.GetProcessStatus(&client.GetProcessStatusRequest{
-			Id: process.Id,
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		if c.isCompleted(status) {
-			break
-		} else if c.isFailed(status) {
-			return nil, fmt.Errorf("the task processing has failed")
-		}
-
-		select {
-		case <-timeout:
-			return nil, fmt.Errorf("the task processing had timed out")
-		default:
-			c.backoff(retry)
-			retry++
-		}
-	}
-
-	output, err := cl.GetProcessOutput(&client.GetProcessOutputRequest{
-		Id: process.Id,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &output.Output.Source, nil
+	return &process.Source, nil
 }
 
 func (c *Cli) configure() error {
@@ -478,15 +463,6 @@ func (c *Cli) configure() error {
 
 func (c *Cli) printVersion() {
 	c.logger.Infof("CodeMaker CLI version %s (Build %s)", Version, Build)
-}
-
-func (c *Cli) isCompleted(status *client.GetProcessStatusResponse) bool {
-	return status.Status == client.StatusCompleted
-}
-
-func (c *Cli) isFailed(status *client.GetProcessStatusResponse) bool {
-	return status.Status == client.StatusFailed ||
-		status.Status == client.StatusTimedOut
 }
 
 func (c *Cli) backoff(retry int) {
@@ -576,7 +552,7 @@ func (c *Cli) writeFile(file string, source string) error {
 	return os.WriteFile(file, []byte(source), 0644)
 }
 
-func (c *Cli) createClient(config client.Config) client.Client {
+func (c *Cli) createClient(config client.Config) (client.Client, error) {
 	return client.NewClient(config)
 }
 
