@@ -12,6 +12,7 @@ import (
 
 const (
 	apiKeyEnvironmentVariable = "CODEMAKER_API_KEY"
+	defaultMaxRetries         = 10
 )
 
 func createConfig() (*client.Config, error) {
@@ -35,7 +36,10 @@ func createConfig() (*client.Config, error) {
 		return nil, fmt.Errorf("failed to resolve CODEMAKER_API_KEY")
 	}
 
+	maxRetries := defaultMaxRetries
+
 	return &client.Config{
-		ApiKey: apiKey,
+		ApiKey:     apiKey,
+		MaxRetries: &maxRetries,
 	}, nil
 }
