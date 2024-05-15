@@ -4,6 +4,8 @@ github.com/codemakerai/codemaker-sdk-go v1.1.0 h1:US6FE0epq5JLwS4Hx9TP17SDdbx4i5
 github.com/codemakerai/codemaker-sdk-go v1.1.0/go.mod h1:T1nfKPMJgL/qyMTc0CCbdqiAlcwXK9ljGnJbuifbr2c=
 github.com/codemakerai/codemaker-sdk-go v1.2.0 h1:8omXEqzTSg/j1t59rfi/z1P5WhVxdvNcG+XsOoM6Kdk=
 github.com/codemakerai/codemaker-sdk-go v1.2.0/go.mod h1:9ocNCMuJt5S+NBTuEWMlDxHPqhucY6gKV2QLXsZjJCI=
+github.com/codemakerai/codemaker-sdk-go v1.3.0 h1:URdgelgs9B/JvqUrD1ZN88JKnjSusuic5AbXbHiIDR0=
+github.com/codemakerai/codemaker-sdk-go v1.3.0/go.mod h1:9ocNCMuJt5S+NBTuEWMlDxHPqhucY6gKV2QLXsZjJCI=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
