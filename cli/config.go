@@ -15,7 +15,12 @@ const (
 	defaultMaxRetries         = 10
 )
 
-func createConfig() (*client.Config, error) {
+func createConfig(endpoint *string) (*client.Config, error) {
+	var serviceEndpoint *string = nil
+	if endpoint != nil && len(*endpoint) > 0 {
+		serviceEndpoint = endpoint
+	}
+
 	apiKey := os.Getenv(apiKeyEnvironmentVariable)
 
 	if len(apiKey) == 0 {
@@ -39,6 +44,7 @@ func createConfig() (*client.Config, error) {
 	maxRetries := defaultMaxRetries
 
 	return &client.Config{
+		Endpoint:   serviceEndpoint,
 		ApiKey:     apiKey,
 		MaxRetries: &maxRetries,
 	}, nil

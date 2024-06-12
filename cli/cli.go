@@ -71,25 +71,26 @@ func (c *Cli) parseGenerateArgs() {
 
 	switch os.Args[2] {
 	case "code":
-		generateDocsCmd := flag.NewFlagSet("generateCode", flag.ExitOnError)
-		lang := generateDocsCmd.String("language", "", "Programming language: JavaScript, Java, Kotlin")
-		replace := generateDocsCmd.Bool("replace", false, "Determines if the existing code is replaced")
-		codePath := generateDocsCmd.String("codepath", "", "The codepath to match.")
-		model := generateDocsCmd.String("model", "", "The fine-tuned model name.")
+		generateCodeCmd := flag.NewFlagSet("generateCode", flag.ExitOnError)
+		lang := generateCodeCmd.String("language", "", "Programming language: JavaScript, Java, Kotlin")
+		replace := generateCodeCmd.Bool("replace", false, "Determines if the existing code is replaced")
+		codePath := generateCodeCmd.String("codepath", "", "The codepath to match.")
+		model := generateCodeCmd.String("model", "", "The fine-tuned model name.")
+		endpoint := generateCodeCmd.String("endpoint", "", "The endpoint name.")
 
-		err := generateDocsCmd.Parse(os.Args[3:])
+		err := generateCodeCmd.Parse(os.Args[3:])
 		if err != nil {
 			c.logger.Errorf("Could not parse args %v", err)
 			os.Exit(1)
 		}
 
-		if len(generateDocsCmd.Args()) == 0 {
+		if len(generateCodeCmd.Args()) == 0 {
 			c.logger.Errorf("Expected file input")
 			fmt.Printf("Usage: codemaker generate code <file>\n")
 			os.Exit(1)
 		}
 
-		config, err := createConfig()
+		config, err := createConfig(endpoint)
 		if err != nil {
 			c.logger.Errorf("No valid api key found: %v", err)
 			os.Exit(1)
@@ -101,7 +102,7 @@ func (c *Cli) parseGenerateArgs() {
 			os.Exit(1)
 		}
 
-		files := generateDocsCmd.Args()[0:]
+		files := generateCodeCmd.Args()[0:]
 
 		if err := c.generateCode(cl, lang, replace, codePath, model, files); err != nil {
 			c.logger.Errorf("Could not generate the code %v", err)
@@ -112,6 +113,7 @@ func (c *Cli) parseGenerateArgs() {
 		lang := generateDocsCmd.String("language", "", "Programming language: JavaScript, Java, Kotlin")
 		replace := generateDocsCmd.Bool("replace", false, "Determines if the existing documentations are replaced")
 		codePath := generateDocsCmd.String("codepath", "", "The codepath to match.")
+		endpoint := generateDocsCmd.String("endpoint", "", "The endpoint name.")
 
 		err := generateDocsCmd.Parse(os.Args[3:])
 		if err != nil {
@@ -125,7 +127,7 @@ func (c *Cli) parseGenerateArgs() {
 			os.Exit(1)
 		}
 
-		config, err := createConfig()
+		config, err := createConfig(endpoint)
 		if err != nil {
 			c.logger.Errorf("No valid api key found: %v", err)
 			os.Exit(1)
@@ -157,21 +159,22 @@ func (c *Cli) parseFixArgs() {
 
 	switch os.Args[2] {
 	case "syntax":
-		refactorNaming := flag.NewFlagSet("fixSyntax", flag.ExitOnError)
-		lang := refactorNaming.String("language", "", "Programming language: JavaScript, Java, Kotlin")
+		correctSyntaxCmd := flag.NewFlagSet("fixSyntax", flag.ExitOnError)
+		lang := correctSyntaxCmd.String("language", "", "Programming language: JavaScript, Java, Kotlin")
+		endpoint := correctSyntaxCmd.String("endpoint", "", "The endpoint name.")
 
-		err := refactorNaming.Parse(os.Args[3:])
+		err := correctSyntaxCmd.Parse(os.Args[3:])
 		if err != nil {
 			c.logger.Errorf("Could not parse args %v", err)
 		}
 
-		if len(refactorNaming.Args()) == 0 {
+		if len(correctSyntaxCmd.Args()) == 0 {
 			c.logger.Errorf("Expected file input")
 			fmt.Printf("Usage: codemaker fix syntax <file>")
 			os.Exit(1)
 		}
 
-		config, err := createConfig()
+		config, err := createConfig(endpoint)
 		if err != nil {
 			c.logger.Errorf("No valid api key found %v", err)
 			os.Exit(1)
@@ -183,7 +186,7 @@ func (c *Cli) parseFixArgs() {
 			os.Exit(1)
 		}
 
-		input := refactorNaming.Args()[0:]
+		input := correctSyntaxCmd.Args()[0:]
 
 		if err := c.fixSyntax(cl, lang, input); err != nil {
 			c.logger.Errorf("Could not fix syntax %v", err)
@@ -488,7 +491,6 @@ func (c *Cli) printHelp() {
 	fmt.Printf("\n")
 	fmt.Printf("Commands:\n")
 	fmt.Printf(" * generate\n")
-	fmt.Printf(" * migrate\n")
 	fmt.Printf(" * refactor\n")
 	fmt.Printf(" * fix\n")
 	fmt.Printf(" * configure\n")
@@ -503,14 +505,6 @@ func (c *Cli) printGenerateHelp() {
 	fmt.Printf(" * code\n")
 	fmt.Printf(" * docs\n")
 	fmt.Printf(" * unit-tests\n")
-	os.Exit(1)
-}
-
-func (c *Cli) printMigrateHelp() {
-	fmt.Printf("Usage: codemaker migrate <command>\n")
-	fmt.Printf("\n")
-	fmt.Printf("Commands:\n")
-	fmt.Printf(" * syntax\n")
 	os.Exit(1)
 }
 
