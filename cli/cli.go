@@ -12,7 +12,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
@@ -77,6 +76,7 @@ func (c *Cli) parseGenerateArgs() {
 		codePath := generateCodeCmd.String("codepath", "", "The codepath to match.")
 		model := generateCodeCmd.String("model", "", "The fine-tuned model name.")
 		endpoint := generateCodeCmd.String("endpoint", "", "The endpoint name.")
+		failFast := generateCodeCmd.Bool("fail-fast", true, "Whether to stop on error.")
 
 		err := generateCodeCmd.Parse(os.Args[3:])
 		if err != nil {
@@ -104,7 +104,7 @@ func (c *Cli) parseGenerateArgs() {
 
 		files := generateCodeCmd.Args()[0:]
 
-		if err := c.generateCode(cl, lang, replace, codePath, model, files); err != nil {
+		if err := c.generateCode(cl, lang, replace, codePath, model, failFast, files); err != nil {
 			c.logger.Errorf("Could not generate the code %v", err)
 		}
 		break
@@ -114,6 +114,7 @@ func (c *Cli) parseGenerateArgs() {
 		replace := generateDocsCmd.Bool("replace", false, "Determines if the existing documentations are replaced")
 		codePath := generateDocsCmd.String("codepath", "", "The codepath to match.")
 		endpoint := generateDocsCmd.String("endpoint", "", "The endpoint name.")
+		failFast := generateDocsCmd.Bool("fail-fast", true, "Whether to stop on error.")
 
 		err := generateDocsCmd.Parse(os.Args[3:])
 		if err != nil {
@@ -141,7 +142,7 @@ func (c *Cli) parseGenerateArgs() {
 
 		files := generateDocsCmd.Args()[0:]
 
-		if err := c.generateDocumentation(cl, lang, replace, codePath, files); err != nil {
+		if err := c.generateDocumentation(cl, lang, replace, codePath, failFast, files); err != nil {
 			c.logger.Errorf("Could not generate the documentation %v", err)
 		}
 		break
@@ -162,6 +163,7 @@ func (c *Cli) parseFixArgs() {
 		correctSyntaxCmd := flag.NewFlagSet("fixSyntax", flag.ExitOnError)
 		lang := correctSyntaxCmd.String("language", "", "Programming language: JavaScript, Java, Kotlin")
 		endpoint := correctSyntaxCmd.String("endpoint", "", "The endpoint name.")
+		failFast := correctSyntaxCmd.Bool("fail-fast", true, "Whether to stop on error.")
 
 		err := correctSyntaxCmd.Parse(os.Args[3:])
 		if err != nil {
@@ -188,7 +190,7 @@ func (c *Cli) parseFixArgs() {
 
 		input := correctSyntaxCmd.Args()[0:]
 
-		if err := c.fixSyntax(cl, lang, input); err != nil {
+		if err := c.fixSyntax(cl, lang, failFast, input); err != nil {
 			c.logger.Errorf("Could not fix syntax %v", err)
 		}
 		break
@@ -198,11 +200,15 @@ func (c *Cli) parseFixArgs() {
 	}
 }
 
-func (c *Cli) generateCode(cl client.Client, lang *string, replace *bool, codePath *string, model *string, files []string) error {
+func (c *Cli) generateCode(cl client.Client, lang *string, replace *bool, codePath *string, model *string, failFast *bool, files []string) error {
 	return c.walkPath(files, func(file string) error {
 		if lang == nil || len(*lang) == 0 {
 			actLang, err := languageFromExtension(filepath.Ext(file))
 			if err != nil {
+				if !c.isFailFast(failFast) {
+					c.logger.Errorf("Could not generate the code %v", err)
+					return nil
+				}
 				return err
 			}
 			lang = &actLang
@@ -211,15 +217,27 @@ func (c *Cli) generateCode(cl client.Client, lang *string, replace *bool, codePa
 		c.logger.Infof("Generating code in file %s", file)
 		source, err := c.readFile(file)
 		if err != nil {
+			if !c.isFailFast(failFast) {
+				c.logger.Errorf("File %s could not be read %v", file, err)
+				return nil
+			}
 			return err
 		}
 
 		output, err := c.process(cl, client.ModeCode, *lang, *replace, codePath, model, source)
 		if err != nil {
+			if !c.isFailFast(failFast) {
+				c.logger.Errorf("Failed to process file %s %v", file, err)
+				return nil
+			}
 			return err
 		}
 
 		if err := c.writeFile(file, *output); err != nil {
+			if !c.isFailFast(failFast) {
+				c.logger.Errorf("File %s could not be written %v", file, err)
+				return nil
+			}
 			return err
 		}
 
@@ -227,11 +245,15 @@ func (c *Cli) generateCode(cl client.Client, lang *string, replace *bool, codePa
 	})
 }
 
-func (c *Cli) generateDocumentation(cl client.Client, lang *string, replace *bool, codePath *string, files []string) error {
+func (c *Cli) generateDocumentation(cl client.Client, lang *string, replace *bool, codePath *string, failFast *bool, files []string) error {
 	return c.walkPath(files, func(file string) error {
 		if lang == nil || len(*lang) == 0 {
 			actLang, err := languageFromExtension(filepath.Ext(file))
 			if err != nil {
+				if !c.isFailFast(failFast) {
+					c.logger.Errorf("Could not generate the documentation %v", err)
+					return nil
+				}
 				return err
 			}
 			lang = &actLang
@@ -240,141 +262,43 @@ func (c *Cli) generateDocumentation(cl client.Client, lang *string, replace *boo
 		c.logger.Infof("Generating documentation in file %s", file)
 		source, err := c.readFile(file)
 		if err != nil {
+			if !c.isFailFast(failFast) {
+				c.logger.Errorf("File %s could not be read %v", file, err)
+				return nil
+			}
 			return err
 		}
 
 		output, err := c.process(cl, client.ModeDocument, *lang, *replace, codePath, nil, source)
 		if err != nil {
-			return err
-		}
-
-		if err := c.writeFile(file, *output); err != nil {
-			return err
-		}
-
-		return nil
-	})
-}
-
-func (c *Cli) generateTests(cl client.Client, lang *string, files []string, outputDir *string) error {
-	return c.walkPath(files, func(file string) error {
-		if lang == nil || len(*lang) == 0 {
-			actLang, err := languageFromExtension(filepath.Ext(file))
-			if err != nil {
-				c.logger.Errorf("skipping unsupported file %s", file)
-				return err
-			}
-			lang = &actLang
-		}
-
-		c.logger.Infof("Generating tests for file %s", file)
-		source, err := c.readFile(file)
-		if err != nil {
-			c.logger.Errorf("failed to read file %s %v", file, err)
-			return err
-		}
-
-		output, err := c.process(cl, client.ModeUnitTest, *lang, false, nil, nil, source)
-		if err != nil {
-			c.logger.Errorf("failed to generate documentation for file %s %v", file, err)
-			return err
-		}
-
-		suffix, err := testFileSuffix(*lang)
-		if err != nil {
-			c.logger.Errorf("could not get suffix for file %s %v", file, err)
-			return err
-		}
-
-		var outputFile string
-		if outputDir != nil && len(*outputDir) > 0 {
-			err := os.MkdirAll(*outputDir, 0755)
-			if err != nil {
-				c.logger.Errorf("could not create directory %s", *outputDir)
-				return err
-			}
-			outputFile = filepath.Join(*outputDir, strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))+suffix)
-		} else {
-			outputFile = strings.TrimSuffix(file, filepath.Ext(file)) + suffix
-		}
-		if err := c.writeFile(outputFile, *output); err != nil {
-			c.logger.Errorf("failed to write file %s %v", file, err)
-			return err
-		}
-		return nil
-	})
-}
-
-func (c *Cli) migrateSyntax(cl client.Client, lang *string, files []string) error {
-	return c.walkPath(files, func(file string) error {
-		if lang == nil || len(*lang) == 0 {
-			actLang, err := languageFromExtension(filepath.Ext(file))
-			if err != nil {
-				c.logger.Errorf("skipping unsupported file %s", file)
+			if !c.isFailFast(failFast) {
+				c.logger.Errorf("Failed to process file %s %v", file, err)
 				return nil
 			}
-			lang = &actLang
-		}
-
-		c.logger.Infof("Migrating syntax in file %s", file)
-		source, err := c.readFile(file)
-		if err != nil {
-			c.logger.Errorf("failed to read file %s %v", file, err)
-			return nil
-		}
-
-		output, err := c.process(cl, client.ModeMigrateSyntax, *lang, false, nil, nil, source)
-		if err != nil {
-			c.logger.Errorf("failed to migrate syntax in file %s %v", file, err)
-			return nil
+			return err
 		}
 
 		if err := c.writeFile(file, *output); err != nil {
-			c.logger.Errorf("failed to write file %s %v", file, err)
-			return nil
-		}
-		return nil
-	})
-}
-
-func (c *Cli) refactorNaming(cl client.Client, lang *string, files []string) error {
-	return c.walkPath(files, func(file string) error {
-		if lang == nil || len(*lang) == 0 {
-			actLang, err := languageFromExtension(filepath.Ext(file))
-			if err != nil {
-				c.logger.Errorf("skipping unsupported file %s", file)
+			if !c.isFailFast(failFast) {
+				c.logger.Errorf("File %s could not be written %v", file, err)
 				return nil
 			}
-			lang = &actLang
+			return err
 		}
 
-		c.logger.Infof("Renaming local variables in file %s", file)
-		source, err := c.readFile(file)
-		if err != nil {
-			c.logger.Errorf("failed to read file %s %v", file, err)
-			return nil
-		}
-
-		output, err := c.process(cl, client.ModeRefactorNaming, *lang, false, nil, nil, source)
-		if err != nil {
-			c.logger.Errorf("failed to rename variables in file %s %v", file, err)
-			return nil
-		}
-
-		if err := c.writeFile(file, *output); err != nil {
-			c.logger.Errorf("failed to write file %s %v", file, err)
-			return nil
-		}
 		return nil
 	})
 }
 
-func (c *Cli) fixSyntax(cl client.Client, lang *string, files []string) error {
+func (c *Cli) fixSyntax(cl client.Client, lang *string, failFast *bool, files []string) error {
 	return c.walkPath(files, func(file string) error {
 		if lang == nil || len(*lang) == 0 {
 			actLang, err := languageFromExtension(filepath.Ext(file))
 			if err != nil {
-				c.logger.Errorf("skipping unsupported file %s", file)
+				if !c.isFailFast(failFast) {
+					c.logger.Errorf("Could not fix syntax %v", err)
+					return nil
+				}
 				return nil
 			}
 			lang = &actLang
@@ -383,18 +307,27 @@ func (c *Cli) fixSyntax(cl client.Client, lang *string, files []string) error {
 		c.logger.Infof("Fixing syntax in file %s", file)
 		source, err := c.readFile(file)
 		if err != nil {
-			c.logger.Errorf("failed to read file %s %v", file, err)
+			if !c.isFailFast(failFast) {
+				c.logger.Errorf("File %s could not be read %v", file, err)
+				return nil
+			}
 			return nil
 		}
 
 		output, err := c.process(cl, client.ModeFixSyntax, *lang, false, nil, nil, source)
 		if err != nil {
-			c.logger.Errorf("failed to fix syntax in file %s %v", file, err)
+			if !c.isFailFast(failFast) {
+				c.logger.Errorf("Failed to process file %s %v", file, err)
+				return nil
+			}
 			return nil
 		}
 
 		if err := c.writeFile(file, *output); err != nil {
-			c.logger.Errorf("failed to write file %s %v", file, err)
+			if !c.isFailFast(failFast) {
+				c.logger.Errorf("File %s could not be written %v", file, err)
+				return nil
+			}
 			return nil
 		}
 		return nil
@@ -484,6 +417,10 @@ func (c *Cli) backoff(retry int) {
 	}
 
 	time.Sleep(retryDelay)
+}
+
+func (c *Cli) isFailFast(failFast *bool) bool {
+	return failFast != nil && *failFast
 }
 
 func (c *Cli) printHelp() {
