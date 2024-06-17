@@ -1,3 +1,6 @@
+all: build
+	@:
+
 clean:
 	go clean
 	rm -f ./codemaker-sdk-go
