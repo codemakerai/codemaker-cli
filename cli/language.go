@@ -12,6 +12,7 @@ var fileExtensions = map[string]string{
 	".cpp":  client.LanguageCPP,
 	".cxx":  client.LanguageCPP,
 	".cc":   client.LanguageCPP,
+	".py":   client.LanguagePython,
 	".js":   client.LanguageJavaScript,
 	".jsx":  client.LanguageJavaScript,
 	".java": client.LanguageJava,
