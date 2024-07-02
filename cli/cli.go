@@ -113,6 +113,7 @@ func (c *Cli) parseGenerateArgs() {
 		lang := generateDocsCmd.String("language", "", "Programming language: JavaScript, Java, Kotlin")
 		replace := generateDocsCmd.Bool("replace", false, "Determines if the existing documentations are replaced")
 		codePath := generateDocsCmd.String("codepath", "", "The codepath to match.")
+		visibility := generateDocsCmd.String("visibility", "", "Visibility.")
 		minimalLinesLength := generateDocsCmd.Int("minimal-lines-length", 0, "The minimal lines complexity.")
 		endpoint := generateDocsCmd.String("endpoint", "", "The endpoint name.")
 		failFast := generateDocsCmd.Bool("fail-fast", true, "Whether to stop on error.")
@@ -143,7 +144,7 @@ func (c *Cli) parseGenerateArgs() {
 
 		files := generateDocsCmd.Args()[0:]
 
-		if err := c.generateDocumentation(cl, lang, replace, codePath, minimalLinesLength, failFast, files); err != nil {
+		if err := c.generateDocumentation(cl, lang, replace, codePath, visibility, minimalLinesLength, failFast, files); err != nil {
 			c.logger.Errorf("Could not generate the documentation %v", err)
 		}
 		break
@@ -225,7 +226,7 @@ func (c *Cli) generateCode(cl client.Client, lang *string, replace *bool, codePa
 			return err
 		}
 
-		output, err := c.process(cl, client.ModeCode, *lang, *replace, codePath, nil, model, source)
+		output, err := c.process(cl, client.ModeCode, *lang, *replace, codePath, nil, nil, model, source)
 		if err != nil {
 			if !c.isFailFast(failFast) {
 				c.logger.Errorf("Failed to process file %s %v", file, err)
@@ -246,7 +247,7 @@ func (c *Cli) generateCode(cl client.Client, lang *string, replace *bool, codePa
 	})
 }
 
-func (c *Cli) generateDocumentation(cl client.Client, lang *string, replace *bool, codePath *string, minimalLinesLength *int, failFast *bool, files []string) error {
+func (c *Cli) generateDocumentation(cl client.Client, lang *string, replace *bool, codePath *string, visibility *string, minimalLinesLength *int, failFast *bool, files []string) error {
 	return c.walkPath(files, func(file string) error {
 		if lang == nil || len(*lang) == 0 {
 			actLang, err := languageFromExtension(filepath.Ext(file))
@@ -270,7 +271,7 @@ func (c *Cli) generateDocumentation(cl client.Client, lang *string, replace *boo
 			return err
 		}
 
-		output, err := c.process(cl, client.ModeDocument, *lang, *replace, codePath, minimalLinesLength, nil, source)
+		output, err := c.process(cl, client.ModeDocument, *lang, *replace, codePath, visibility, minimalLinesLength, nil, source)
 		if err != nil {
 			if !c.isFailFast(failFast) {
 				c.logger.Errorf("Failed to process file %s %v", file, err)
@@ -315,7 +316,7 @@ func (c *Cli) fixSyntax(cl client.Client, lang *string, failFast *bool, files []
 			return nil
 		}
 
-		output, err := c.process(cl, client.ModeFixSyntax, *lang, false, nil, nil, nil, source)
+		output, err := c.process(cl, client.ModeFixSyntax, *lang, false, nil, nil, nil, nil, source)
 		if err != nil {
 			if !c.isFailFast(failFast) {
 				c.logger.Errorf("Failed to process file %s %v", file, err)
@@ -335,7 +336,7 @@ func (c *Cli) fixSyntax(cl client.Client, lang *string, failFast *bool, files []
 	})
 }
 
-func (c *Cli) process(cl client.Client, mode string, lang string, replace bool, codePath *string, minimalLinesLength *int, model *string, source string) (*string, error) {
+func (c *Cli) process(cl client.Client, mode string, lang string, replace bool, codePath *string, visibility *string, minimalLinesLength *int, model *string, source string) (*string, error) {
 	ctx := context.Background()
 
 	modify := client.ModifyNone
@@ -363,6 +364,7 @@ func (c *Cli) process(cl client.Client, mode string, lang string, replace bool, 
 			Modify:             &modify,
 			CodePath:           codePath,
 			Model:              model,
+			Visibility:         visibility,
 			MinimalLinesLength: optMinimalLinesLength,
 		},
 	})
