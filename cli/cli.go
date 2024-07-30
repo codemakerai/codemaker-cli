@@ -226,7 +226,7 @@ func (c *Cli) generateCode(cl client.Client, lang *string, replace *bool, codePa
 			return err
 		}
 
-		output, err := c.process(cl, client.ModeCode, *lang, *replace, codePath, nil, nil, model, source)
+		output, err := c.process(cl, client.ModeCode, *lang, *replace, codePath, nil, nil, &file, model, source)
 		if err != nil {
 			if !c.isFailFast(failFast) {
 				c.logger.Errorf("Failed to process file %s %v", file, err)
@@ -271,7 +271,7 @@ func (c *Cli) generateDocumentation(cl client.Client, lang *string, replace *boo
 			return err
 		}
 
-		output, err := c.process(cl, client.ModeDocument, *lang, *replace, codePath, visibility, minimalLinesLength, nil, source)
+		output, err := c.process(cl, client.ModeDocument, *lang, *replace, codePath, visibility, minimalLinesLength, nil, nil, source)
 		if err != nil {
 			if !c.isFailFast(failFast) {
 				c.logger.Errorf("Failed to process file %s %v", file, err)
@@ -316,7 +316,7 @@ func (c *Cli) fixSyntax(cl client.Client, lang *string, failFast *bool, files []
 			return nil
 		}
 
-		output, err := c.process(cl, client.ModeFixSyntax, *lang, false, nil, nil, nil, nil, source)
+		output, err := c.process(cl, client.ModeFixSyntax, *lang, false, nil, nil, nil, nil, nil, source)
 		if err != nil {
 			if !c.isFailFast(failFast) {
 				c.logger.Errorf("Failed to process file %s %v", file, err)
@@ -336,7 +336,7 @@ func (c *Cli) fixSyntax(cl client.Client, lang *string, failFast *bool, files []
 	})
 }
 
-func (c *Cli) process(cl client.Client, mode string, lang string, replace bool, codePath *string, visibility *string, minimalLinesLength *int, model *string, source string) (*string, error) {
+func (c *Cli) process(cl client.Client, mode string, lang string, replace bool, codePath *string, visibility *string, minimalLinesLength *int, path *string, model *string, source string) (*string, error) {
 	ctx := context.Background()
 
 	modify := client.ModifyNone
@@ -360,6 +360,7 @@ func (c *Cli) process(cl client.Client, mode string, lang string, replace bool, 
 		Input: client.Input{
 			Source: source,
 		},
+		Path: path,
 		Options: &client.Options{
 			Modify:             &modify,
 			CodePath:           codePath,
